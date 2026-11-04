@@ -1,0 +1,108 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: capstone-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: genai_training
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_capstone:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: claims-api
+    command: ["python", "-m", "uvicorn", "intelligent_claims_agent.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      PYTHONPATH: /app/src
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      HUMAN_DECISION_API_KEY: demo-local-key
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: claims-ui
+    command: ["python", "-m", "streamlit", "run", "streamlit_app.py", "--server.address", "0.0.0.0", "--server.port", "8501"]
+    environment:
+      PYTHONPATH: /app/src
+      CLAIMS_API_BASE_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+
+  case-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: case-mcp
+    command: ["python", "scripts/run_mcp_server.py", "case", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8101
+      PYTHONPATH: /app/src
+    ports:
+      - "8101:8101"
+    depends_on:
+      - postgres
+
+  policy-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: policy-mcp
+    command: ["python", "scripts/run_mcp_server.py", "policy", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8102
+      PYTHONPATH: /app/src
+    ports:
+      - "8102:8102"
+    depends_on:
+      - postgres
+
+  documents-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: documents-mcp
+    command: ["python", "scripts/run_mcp_server.py", "documents", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8103
+      PYTHONPATH: /app/src
+    ports:
+      - "8103:8103"
+    depends_on:
+      - postgres
+
+  workflow-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: workflow-mcp
+    command: ["python", "scripts/run_mcp_server.py", "workflow", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8104
+      PYTHONPATH: /app/src
+    ports:
+      - "8104:8104"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata_capstone:

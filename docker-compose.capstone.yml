@@ -1,0 +1,75 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: capstone-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: genai_training
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_capstone:/var/lib/postgresql/data
+
+  case-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: case-mcp
+    command: ["python", "scripts/run_mcp_server.py", "case", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8101
+    ports:
+      - "8101:8101"
+    depends_on:
+      - postgres
+
+  policy-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: policy-mcp
+    command: ["python", "scripts/run_mcp_server.py", "policy", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8102
+    ports:
+      - "8102:8102"
+    depends_on:
+      - postgres
+
+  documents-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: documents-mcp
+    command: ["python", "scripts/run_mcp_server.py", "documents", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8103
+    ports:
+      - "8103:8103"
+    depends_on:
+      - postgres
+
+  workflow-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: workflow-mcp
+    command: ["python", "scripts/run_mcp_server.py", "workflow", "--transport", "streamable-http"]
+    environment:
+      DB_URL: postgresql+psycopg2://postgres:postgres@postgres:5432/genai_training
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8104
+    ports:
+      - "8104:8104"
+    depends_on:
+      - postgres
+
+volumes:
+  pgdata_capstone:
